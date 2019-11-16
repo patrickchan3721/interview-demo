@@ -1,0 +1,86 @@
+---
+- hosts: tag_Name_awsdemo
+  gather_facts: no
+  become: yes
+  vars:
+    mysql_root_password: thisisdemo
+
+  pre_tasks:
+    - name: upate apt cache
+      raw: apt-get update
+
+    - name: install python2
+      raw: apt-get -y install python
+
+  tasks:
+    - name: Install MySQL
+      apt: name={{ item }} update_cache=yes cache_valid_time=3600 state=present
+      with_items:
+        - mysql-server
+        - mysql-client
+        - python-mysqldb
+        - python3-pip
+        - python-setuptools
+
+    - name: Start MySQL
+      service:
+        name: mysql
+        state: started
+        enabled: true
+
+    - name: PIP install PyMySQL
+      pip:
+        name: PyMySQL
+        executable: /usr/bin/pip3
+
+    - name: Update mysql root password for all root accounts
+      mysql_user:
+        name: root
+        host: "{{ item }}"
+        password: "{{ mysql_root_password }}"
+        #login_user: root
+        #login_password: "{{ mysql_root_password }}"
+        check_implicit_admin: yes
+        priv: "*.*:ALL,GRANT"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+      with_items:
+        - 127.0.0.1
+        - ::1
+        - localhost
+        #- "{{ ansible_hostname }}"
+
+    - name: Ensure annoymous user not in database
+      mysql_user:
+        name: ''
+        host: "{{ item }}"
+        state: absent
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+      with_items:
+        - localhost
+
+    - name: Remove database test
+      mysql_db:
+        name: test
+        state: absent
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+ 
+    - name: Restart MySQL
+      service: 
+        name: mysql
+        state: restarted
+
+    - name: Copy sql file
+      copy:
+        src: /home/ubuntu/demo/create_table.sql
+        dest: /tmp/create_table.sql
+
+    - name: Create table demo
+      mysql_db:
+        name: demo
+        state: import
+        target: /tmp/create_table.sql
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+

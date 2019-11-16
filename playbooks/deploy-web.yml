@@ -1,0 +1,21 @@
+---
+- hosts: tag_Name_awsdemo
+  become: yes
+
+  tasks:
+    - name: Install Apache
+      apt: name=apache2 update_cache=yes cache_valid_time=3600 state=present
+
+    - name: Configure Apache
+      lineinfile:
+        path: /etc/apache2/sites-available/000-default.conf
+        line: "\tDirectoryIndex /cgi-bin/index.py index.html"
+        insertbefore: </VirtualHost>
+
+    - name: Enable cgi
+      command: a2enmod cgi
+
+    - name: Restart Apache
+      service:
+        name: apache2
+        state: restarted

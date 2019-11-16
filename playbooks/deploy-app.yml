@@ -1,0 +1,21 @@
+---
+- hosts: tag_Name_awsdemo
+  become: yes
+  tasks:
+    - name: Install PIP
+      apt: name=python3-pip update_cache=yes cache_valid_time=3600 state=present
+
+    - name: PIP install PyMySQL
+      pip:
+        name: PyMySQL
+        executable: /usr/bin/pip3
+
+    - name: Copy app
+      copy:
+        src: "{{ item }}"
+        dest: /usr/lib/cgi-bin
+        owner: www-data
+        group: www-data
+        mode: 0755
+      with_fileglob:
+        - /home/ubuntu/demo/*.py
